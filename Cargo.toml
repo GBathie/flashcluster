@@ -1,0 +1,17 @@
+[package]
+name = "hierarchical-clustering"
+version = "0.1.0"
+edition = "2024"
+authors = [
+    "Gabriel Bathie <gbathie.dev@gmail.com>",
+    "Guillaume Lagarde <guillaume.lagarde@gmail.com>",
+]
+
+[dependencies]
+clap = { version = "4.5.40", features = ["derive"] }
+fxhash = "0.2.1"
+itertools = "0.14.0"
+ndarray = "0.16.1"
+ndarray-rand = "0.15.0"
+ordered-float = "5.0.0"
+rand = "0.9.1"
