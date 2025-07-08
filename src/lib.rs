@@ -13,17 +13,15 @@ pub use ultrametric::Ultrametric;
 use numpy::{Ix2, PyReadonlyArrayDyn};
 use pyo3::{exceptions::PyRuntimeError, prelude::*};
 
-/// Formats the sum of two numbers as string.
 #[pyfunction]
 pub fn compute_clustering<'py>(
     points: PyReadonlyArrayDyn<'py, f32>,
     c: f32,
-    method: &str,
+    mode: &str,
 ) -> PyResult<PyUltrametric> {
-    PyUltrametric::new(points, c, method)
+    PyUltrametric::new(points, c, mode)
 }
 
-/// A Python module implemented in Rust.
 #[pymodule]
 pub fn flashcluster(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compute_clustering, m)?)?;
@@ -39,7 +37,7 @@ pub struct PyUltrametric {
 #[pymethods]
 impl PyUltrametric {
     #[new]
-    fn new<'py>(points: PyReadonlyArrayDyn<'py, f32>, c: f32, method: &str) -> PyResult<Self> {
+    fn new<'py>(points: PyReadonlyArrayDyn<'py, f32>, c: f32, mode: &str) -> PyResult<Self> {
         let points: ndarray::ArrayBase<ndarray::ViewRepr<&f32>, Ix2> = points
             .as_array()
             .into_dimensionality()
@@ -50,7 +48,7 @@ impl PyUltrametric {
                 KtParams { gamma: c.sqrt() },
                 CwParams {
                     alpha: c.sqrt(),
-                    mode: match method {
+                    mode: match mode {
                         "precise" => MultiplyMode::Theoretical,
                         _ => MultiplyMode::SquareRoot,
                     },
