@@ -7,5 +7,5 @@ mod ultrametric;
 mod union_find;
 
 pub use cut_weights::{CwParams, MultiplyMode};
-pub use spanning_tree::MstParams;
+pub use spanning_tree::KtParams;
 pub use ultrametric::Ultrametric;

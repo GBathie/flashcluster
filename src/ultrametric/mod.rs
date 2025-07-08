@@ -6,7 +6,7 @@ use rmq::Rmq;
 
 use crate::{
     cut_weights::CwParams,
-    spanning_tree::{Edge, MstParams},
+    spanning_tree::{Edge, KtParams},
     union_find::UnionFindWithData,
 };
 
@@ -22,15 +22,15 @@ impl Ultrametric {
     /// Compute an approximate ultrametric for the given point set.
     ///
     /// `points`: ndarray of shape (n,d) where n is the number of points, d the dimension of the space.
-    pub fn new(points: &Array2<f32>, mst_m: MstParams, cut_weights_m: CwParams) -> Ultrametric {
-        let mst = mst_m.compute_mst(points);
+    pub fn new(points: &Array2<f32>, mst_m: KtParams, cut_weights_m: CwParams) -> Ultrametric {
+        let mst = mst_m.compute_kt(points);
 
         let cw = cut_weights_m.compute_weights(points, mst);
 
         Ultrametric::single_linkage(cw)
     }
 
-    fn single_linkage(mut cut_weights: Vec<Edge>) -> Self {
+    pub(crate) fn single_linkage(mut cut_weights: Vec<Edge>) -> Self {
         cut_weights.sort_unstable_by_key(|e| OrderedFloat(e.2));
 
         let n = cut_weights.len() + 1;

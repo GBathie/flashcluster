@@ -6,11 +6,6 @@ use crate::{afn::estimate_diameter, union_find::UnionFind};
 
 mod kt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MstParams {
-    pub gamma: f32,
-}
-
 /// Represents an edge as a tuple of (endpoint 1, endpoint 2, weight).
 #[derive(Debug, Clone, Copy)]
 pub struct Edge(pub usize, pub usize, pub f32);
@@ -21,8 +16,13 @@ pub struct SpanningTree {
     pub edges: Vec<Edge>,
 }
 
-impl MstParams {
-    pub fn compute_mst(&self, points: &Array2<f32>) -> SpanningTree {
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct KtParams {
+    pub gamma: f32,
+}
+
+impl KtParams {
+    pub fn compute_kt(&self, points: &Array2<f32>) -> SpanningTree {
         let n = points.nrows();
         let max_dist = estimate_diameter(points);
 
@@ -35,7 +35,7 @@ impl MstParams {
     }
 }
 
-/// Compute an exact MST using Kruskal's algorithm.
+/// Compute an MST using Kruskal's algorithm.
 fn exact_mst_krusal(mut edges: Vec<Edge>, n: usize) -> SpanningTree {
     edges.sort_unstable_by_key(|e| OrderedFloat(e.2));
     let mut uf = UnionFind::new(n);
@@ -49,8 +49,45 @@ fn exact_mst_krusal(mut edges: Vec<Edge>, n: usize) -> SpanningTree {
 
 #[cfg(test)]
 mod test {
+    use ndarray::Array2;
+    use ndarray_rand::{RandomExt, rand_distr::StandardNormal};
+
+    use crate::{
+        KtParams, Ultrametric,
+        points::dist,
+        spanning_tree::{Edge, exact_mst_krusal},
+    };
+
+    /// WARNING: Stochastic test
     #[test]
-    fn test_mst() {
-        panic!("Implement more tests!")
+    fn test_kt() {
+        let distrib = StandardNormal;
+        let points = Array2::random((200, 20), distrib);
+        let (n, _dim) = points.dim();
+        let gamma: f32 = 1.5;
+        let params = KtParams { gamma };
+
+        let mut full_edges = vec![];
+        for i in 0..n {
+            let p1 = points.row(i);
+            for j in i + 1..n {
+                let p2 = points.row(j);
+                let d = dist(&p1, &p2);
+                full_edges.push(Edge(i, j, d));
+            }
+        }
+        let mst = exact_mst_krusal(full_edges, n);
+
+        let kt = params.compute_kt(&points);
+        // Constructing an ultrametric directly on the KT
+        // gives us an efficient way to compute the max weight of an edge on every path.
+        let path_max_dist_ultrametric = Ultrametric::single_linkage(kt.edges);
+        let mut count_bad = 0;
+        for e in mst.edges {
+            if path_max_dist_ultrametric.dist(e.0, e.1) > gamma * e.2 {
+                count_bad += 1;
+            }
+        }
+        assert!(count_bad <= 10, "{count_bad}");
     }
 }

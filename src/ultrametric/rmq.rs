@@ -129,7 +129,7 @@ mod test {
     }
 
     #[test]
-    fn fancy_syntax() {
+    fn extended_syntax() {
         let v = vec![1., 2., 3., 4., 5.];
         let rmq = Rmq::new(v).unwrap();
 

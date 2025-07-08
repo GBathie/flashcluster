@@ -93,11 +93,3 @@ pub(crate) fn apx_cut_weights(
         })
         .collect()
 }
-
-#[cfg(test)]
-mod test {
-    #[test]
-    fn test_mst() {
-        panic!("Implement more tests!")
-    }
-}

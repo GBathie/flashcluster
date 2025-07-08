@@ -186,9 +186,7 @@ mod tests {
         uf.merge(2, 3, 5);
         uf.merge(1, 4, 1);
 
-        let mut cluster_data = uf.iter_data(1).collect::<Vec<_>>();
-        cluster_data.sort();
-
-        assert_eq!(cluster_data, &[1, 5, 10]);
+        let cluster_data = uf.iter_data(1).collect::<Vec<_>>();
+        assert_eq!(cluster_data, &[10, 5, 1]);
     }
 }

@@ -86,16 +86,14 @@ impl<'afn> AfnCluster<'afn> {
         let (_, d) = projections.dim();
         let buckets = (0..d)
             .map(|i| {
-                let bucket = projections
+                projections
                     .rows()
                     .into_iter()
                     .enumerate()
                     .map(|(id, p)| (Reverse(OrderedFloat(p[i])), id))
                     .sorted_unstable()
                     .take(m)
-                    .collect_vec();
-
-                bucket
+                    .collect_vec()
             })
             .collect();
 
