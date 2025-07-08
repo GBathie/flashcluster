@@ -3,6 +3,7 @@
 
 use std::mem::swap;
 
+use ndarray::Data;
 use ordered_float::NotNan;
 
 use crate::{
@@ -19,7 +20,11 @@ pub struct CwParams {
 }
 
 impl CwParams {
-    pub fn compute_weights(&self, points: &PointSet, mst: SpanningTree) -> Vec<Edge> {
+    pub fn compute_weights<D: Data<Elem = f32>>(
+        &self,
+        points: &PointSet<D>,
+        mst: SpanningTree,
+    ) -> Vec<Edge> {
         apx_cut_weights(points, mst, self.alpha, self.mode)
     }
 }
@@ -40,8 +45,8 @@ pub enum MultiplyMode {
 
 /// Compute an alpha-approximation of the cut weights in time `O(n^(1+1/alpha^2)`
 /// using Approximate Farthest Neighbors queries.
-pub(crate) fn apx_cut_weights(
-    points: &PointSet,
+pub(crate) fn apx_cut_weights<D: Data<Elem = f32>>(
+    points: &PointSet<D>,
     mst: SpanningTree,
     alpha: f32,
     mode: MultiplyMode,

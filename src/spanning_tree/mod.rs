@@ -1,8 +1,8 @@
 use kt::gamma_kt;
-use ndarray::Array2;
+use ndarray::Data;
 use ordered_float::OrderedFloat;
 
-use crate::{afn::estimate_diameter, union_find::UnionFind};
+use crate::{afn::estimate_diameter, points::PointSet, union_find::UnionFind};
 
 mod kt;
 
@@ -22,7 +22,7 @@ pub struct KtParams {
 }
 
 impl KtParams {
-    pub fn compute_kt(&self, points: &Array2<f32>) -> SpanningTree {
+    pub fn compute_kt<D: Data<Elem = f32>>(&self, points: &PointSet<D>) -> SpanningTree {
         let n = points.nrows();
         let max_dist = estimate_diameter(points);
 

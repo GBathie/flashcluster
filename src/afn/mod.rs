@@ -9,21 +9,21 @@ use std::{
 };
 
 use itertools::Itertools;
-use ndarray::{Array2, ArrayView1};
+use ndarray::{Array2, ArrayView1, Data};
 use ndarray_rand::{RandomExt, rand_distr::StandardNormal};
 use ordered_float::OrderedFloat;
 
 use crate::points::{PointId, PointSet, dist};
 
 /// Dynamic alpha-approximate farthest neighbor data structure.
-pub struct ApproxFarthestNeighbor<'pts> {
-    points: &'pts PointSet,
+pub struct ApproxFarthestNeighbor<'pts, D: Data<Elem = f32>> {
+    points: &'pts PointSet<D>,
     projections: Array2<f32>,
     m: usize,
 }
 
-impl<'pts> ApproxFarthestNeighbor<'pts> {
-    pub fn new(points: &'pts PointSet, alpha: f32) -> Self {
+impl<'pts, D: Data<Elem = f32>> ApproxFarthestNeighbor<'pts, D> {
+    pub fn new(points: &'pts PointSet<D>, alpha: f32) -> Self {
         let (n, d) = points.dim();
 
         let l = (n as f32).powf(1. / alpha.powi(2)) as usize;
@@ -40,7 +40,7 @@ impl<'pts> ApproxFarthestNeighbor<'pts> {
         }
     }
 
-    pub fn create_clusters(&self) -> Vec<AfnCluster> {
+    pub fn create_clusters(&self) -> Vec<AfnCluster<D>> {
         self.projections
             .rows()
             .into_iter()
@@ -50,17 +50,17 @@ impl<'pts> ApproxFarthestNeighbor<'pts> {
     }
 }
 
-pub struct AfnCluster<'afn> {
-    points: &'afn PointSet,
+pub struct AfnCluster<'afn, D: Data<Elem = f32>> {
+    points: &'afn PointSet<D>,
     projections: &'afn Array2<f32>,
     buckets: Vec<Vec<(Reverse<OrderedFloat<f32>>, PointId)>>,
     m: usize,
 }
 
-impl<'afn> AfnCluster<'afn> {
+impl<'afn, D: Data<Elem = f32>> AfnCluster<'afn, D> {
     /// Creates a cluster containing a single point.
     pub fn new(
-        points: &'afn PointSet,
+        points: &'afn PointSet<D>,
         projections: &'afn Array2<f32>,
         m: usize,
         id: PointId,
@@ -82,7 +82,7 @@ impl<'afn> AfnCluster<'afn> {
     /// Contains a cluster containing all points in the set.
     ///
     /// Used for testing purposes.
-    pub fn new_full(points: &'afn PointSet, projections: &'afn Array2<f32>, m: usize) -> Self {
+    pub fn new_full(points: &'afn PointSet<D>, projections: &'afn Array2<f32>, m: usize) -> Self {
         let (_, d) = projections.dim();
         let buckets = (0..d)
             .map(|i| {
@@ -203,7 +203,7 @@ impl<'a> Ord for HeapEntry<'a> {
 /// 2-Approx for the diameter: find farthest point of farthest point of an arbitrary point.
 ///
 /// The diameter is less than the returned value, and the returned value is at most twice the diameter.
-pub fn estimate_diameter(points: &PointSet) -> f32 {
+pub fn estimate_diameter<D: Data<Elem = f32>>(points: &PointSet<D>) -> f32 {
     // Arbitrary point p0: point at index 0.
     let p0 = points.row(0);
     // Find the farthest point p1.

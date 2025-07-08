@@ -2,7 +2,7 @@
 use crate::points::PointSet;
 
 use fxhash::FxHashMap;
-use ndarray::{Array1, Array2};
+use ndarray::{Array1, Array2, Data};
 use ndarray_rand::{
     RandomExt,
     rand_distr::{StandardNormal, Uniform},
@@ -16,7 +16,11 @@ const MINUS_LOG_P2: f32 = 0.547_931_8;
 /// Computes the LSH Projection of the given set of points, with parameters `radius` and `c`.
 ///
 /// Returns a vector of buckets, i.e. lists of points with the same locality-sensitive hash.
-pub fn projection_lsh(points: &PointSet, radius: f32, c: f32) -> Vec<Vec<usize>> {
+pub fn projection_lsh<D: Data<Elem = f32>>(
+    points: &PointSet<D>,
+    radius: f32,
+    c: f32,
+) -> Vec<Vec<usize>> {
     let (n, d) = points.dim();
     let k = ((n as f32).log2() / MINUS_LOG_P2) as usize;
     let w = W_OVER_C * c;

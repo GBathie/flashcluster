@@ -1,11 +1,12 @@
 use std::mem::swap;
 
-use ndarray::Array2;
+use ndarray::Data;
 use ordered_float::OrderedFloat;
 use rmq::Rmq;
 
 use crate::{
     cut_weights::CwParams,
+    points::PointSet,
     spanning_tree::{Edge, KtParams},
     union_find::UnionFindWithData,
 };
@@ -22,10 +23,14 @@ impl Ultrametric {
     /// Compute an approximate ultrametric for the given point set.
     ///
     /// `points`: ndarray of shape (n,d) where n is the number of points, d the dimension of the space.
-    pub fn new(points: &Array2<f32>, mst_m: KtParams, cut_weights_m: CwParams) -> Ultrametric {
-        let mst = mst_m.compute_kt(points);
+    pub fn new<D: Data<Elem = f32>>(
+        points: &PointSet<D>,
+        kt_params: KtParams,
+        cw_params: CwParams,
+    ) -> Ultrametric {
+        let mst = kt_params.compute_kt(points);
 
-        let cw = cut_weights_m.compute_weights(points, mst);
+        let cw = cw_params.compute_weights(points, mst);
 
         Ultrametric::single_linkage(cw)
     }

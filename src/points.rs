@@ -1,8 +1,8 @@
-use ndarray::{Array2, ArrayBase, Data, Ix1, Zip};
+use ndarray::{ArrayBase, Data, Ix1, Ix2, Zip};
 
 // Type aliases.
 pub type PointId = usize;
-pub type PointSet = Array2<f32>;
+pub type PointSet<D: Data<Elem = f32>> = ArrayBase<D, Ix2>;
 
 /// Compute the squared l2 distance between two points
 pub fn dist2<D1, D2>(p1: &ArrayBase<D1, Ix1>, p2: &ArrayBase<D2, Ix1>) -> f32

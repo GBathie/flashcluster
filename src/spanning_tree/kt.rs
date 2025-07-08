@@ -1,5 +1,7 @@
 use std::{cmp::max, collections::VecDeque};
 
+use ndarray::Data;
+
 use crate::{
     lsh::{projection_lsh, rho},
     points::{PointSet, dist},
@@ -8,7 +10,12 @@ use crate::{
 use super::Edge;
 
 /// Returns a (gamma+o(1))-KT.
-pub fn gamma_kt(points: &PointSet, gamma: f32, min_dist: f32, max_dist: f32) -> Vec<Edge> {
+pub fn gamma_kt<D: Data<Elem = f32>>(
+    points: &PointSet<D>,
+    gamma: f32,
+    min_dist: f32,
+    max_dist: f32,
+) -> Vec<Edge> {
     let mut edges = vec![];
     let mut radius = min_dist;
     let n = points.dim().0;
@@ -21,7 +28,12 @@ pub fn gamma_kt(points: &PointSet, gamma: f32, min_dist: f32, max_dist: f32) -> 
     edges
 }
 
-fn iter_local_bfs(points: &PointSet, radius: f32, gamma: f32, edges: &mut Vec<Edge>) {
+fn iter_local_bfs<D: Data<Elem = f32>>(
+    points: &PointSet<D>,
+    radius: f32,
+    gamma: f32,
+    edges: &mut Vec<Edge>,
+) {
     let (n, _d) = points.dim();
     let rho = rho(gamma);
     let nb_iter = max((n as f32).powf(rho) as usize, 1usize);
@@ -32,7 +44,12 @@ fn iter_local_bfs(points: &PointSet, radius: f32, gamma: f32, edges: &mut Vec<Ed
 }
 
 /// BFS in buckets of LSH
-fn local_bfs(points: &PointSet, radius: f32, gamma: f32, edges: &mut Vec<Edge>) {
+fn local_bfs<D: Data<Elem = f32>>(
+    points: &PointSet<D>,
+    radius: f32,
+    gamma: f32,
+    edges: &mut Vec<Edge>,
+) {
     let buckets = projection_lsh(points, radius, gamma);
     for mut b in buckets {
         while let Some(x) = b.pop() {
