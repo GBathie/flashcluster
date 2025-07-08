@@ -8,7 +8,7 @@ authors = [
 ]
 
 [lib]
-name = "swift_cluster"
+name = "flashcluster"
 crate-type = ["cdylib"]
 
 [dependencies]

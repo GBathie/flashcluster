@@ -25,7 +25,7 @@ pub fn compute_clustering<'py>(
 
 /// A Python module implemented in Rust.
 #[pymodule]
-pub fn swift_cluster(m: &Bound<'_, PyModule>) -> PyResult<()> {
+pub fn flashcluster(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compute_clustering, m)?)?;
     m.add_class::<PyUltrametric>()?;
     Ok(())
