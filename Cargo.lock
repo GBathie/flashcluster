@@ -175,6 +175,7 @@ dependencies = [
  "itertools",
  "ndarray",
  "ndarray-rand",
+ "num-traits",
  "numpy",
  "ordered-float",
  "pyo3",

@@ -10,23 +10,35 @@ use std::{
 
 use itertools::Itertools;
 use ndarray::{Array2, ArrayView1, Data};
-use ndarray_rand::{RandomExt, rand_distr::StandardNormal};
-use ordered_float::OrderedFloat;
+use ndarray_rand::{
+    RandomExt,
+    rand_distr::{Distribution, StandardNormal},
+};
+use num_traits::{AsPrimitive, NumCast};
+use ordered_float::{FloatCore, OrderedFloat};
 
-use crate::points::{PointId, PointSet, dist};
+use crate::points::{FloatType, PointId, PointSet, dist};
 
 /// Dynamic alpha-approximate farthest neighbor data structure.
-pub struct ApproxFarthestNeighbor<'pts, D: Data<Elem = f32>> {
+pub struct ApproxFarthestNeighbor<'pts, F: FloatType, D: Data<Elem = F>> {
     points: &'pts PointSet<D>,
-    projections: Array2<f32>,
+    projections: Array2<F>,
     m: usize,
 }
 
-impl<'pts, D: Data<Elem = f32>> ApproxFarthestNeighbor<'pts, D> {
-    pub fn new(points: &'pts PointSet<D>, alpha: f32) -> Self {
+impl<'pts, F: FloatType, D: Data<Elem = F>> ApproxFarthestNeighbor<'pts, F, D>
+where
+    StandardNormal: Distribution<F>,
+{
+    pub fn new(points: &'pts PointSet<D>, alpha: F) -> Self
+    where
+        F: AsPrimitive<usize>,
+    {
         let (n, d) = points.dim();
 
-        let l = (n as f32).powf(1. / alpha.powi(2)) as usize;
+        let l: usize = (<F as NumCast>::from(n).unwrap())
+            .powf(F::one() / FloatCore::powi(alpha, 2))
+            .as_();
         let target_d = l;
         let proj = Array2::random((d, target_d), StandardNormal);
         let projections = points.dot(&proj);
@@ -40,7 +52,7 @@ impl<'pts, D: Data<Elem = f32>> ApproxFarthestNeighbor<'pts, D> {
         }
     }
 
-    pub fn create_clusters(&self) -> Vec<AfnCluster<D>> {
+    pub fn create_clusters(&self) -> Vec<AfnCluster<F, D>> {
         self.projections
             .rows()
             .into_iter()
@@ -50,21 +62,21 @@ impl<'pts, D: Data<Elem = f32>> ApproxFarthestNeighbor<'pts, D> {
     }
 }
 
-pub struct AfnCluster<'afn, D: Data<Elem = f32>> {
+pub struct AfnCluster<'afn, F: FloatType, D: Data<Elem = F>> {
     points: &'afn PointSet<D>,
-    projections: &'afn Array2<f32>,
-    buckets: Vec<Vec<(Reverse<OrderedFloat<f32>>, PointId)>>,
+    projections: &'afn Array2<F>,
+    buckets: Vec<Vec<(Reverse<OrderedFloat<F>>, PointId)>>,
     m: usize,
 }
 
-impl<'afn, D: Data<Elem = f32>> AfnCluster<'afn, D> {
+impl<'afn, F: FloatType, D: Data<Elem = F>> AfnCluster<'afn, F, D> {
     /// Creates a cluster containing a single point.
     pub fn new(
         points: &'afn PointSet<D>,
-        projections: &'afn Array2<f32>,
+        projections: &'afn Array2<F>,
         m: usize,
         id: PointId,
-        proj: ArrayView1<f32>,
+        proj: ArrayView1<F>,
     ) -> Self {
         let buckets = proj
             .iter()
@@ -82,7 +94,7 @@ impl<'afn, D: Data<Elem = f32>> AfnCluster<'afn, D> {
     /// Contains a cluster containing all points in the set.
     ///
     /// Used for testing purposes.
-    pub fn new_full(points: &'afn PointSet<D>, projections: &'afn Array2<f32>, m: usize) -> Self {
+    pub fn new_full(points: &'afn PointSet<D>, projections: &'afn Array2<F>, m: usize) -> Self {
         let (_, d) = projections.dim();
         let buckets = (0..d)
             .map(|i| {
@@ -112,10 +124,10 @@ impl<'afn, D: Data<Elem = f32>> AfnCluster<'afn, D> {
         }
     }
 
-    pub fn get_farthest(&self, id: PointId) -> (PointId, f32) {
+    pub fn get_farthest(&self, id: PointId) -> (PointId, F) {
         let p = self.points.row(id);
         let projected = self.projections.row(id);
-        let mut heap: BinaryHeap<HeapEntry> = BinaryHeap::new();
+        let mut heap: BinaryHeap<HeapEntry<F>> = BinaryHeap::new();
 
         for (i, &v) in projected.iter().enumerate() {
             let mut bucket_iter = self.buckets[i].iter();
@@ -158,14 +170,14 @@ impl<'afn, D: Data<Elem = f32>> AfnCluster<'afn, D> {
 }
 
 #[derive(Debug)]
-struct HeapEntry<'a> {
-    value: OrderedFloat<f32>,
+struct HeapEntry<'a, F: FloatType> {
+    value: OrderedFloat<F>,
     point_id: PointId,
-    offset: f32,
-    bucket_iter: slice::Iter<'a, (Reverse<OrderedFloat<f32>>, usize)>,
+    offset: F,
+    bucket_iter: slice::Iter<'a, (Reverse<OrderedFloat<F>>, usize)>,
 }
 
-impl<'a> HeapEntry<'a> {
+impl<'a, F: FloatType> HeapEntry<'a, F> {
     pub fn next(mut self) -> Option<Self> {
         if let Some((v, id)) = self.bucket_iter.next() {
             Some(Self {
@@ -180,21 +192,21 @@ impl<'a> HeapEntry<'a> {
     }
 }
 
-impl<'a> PartialEq for HeapEntry<'a> {
+impl<'a, F: FloatType> PartialEq for HeapEntry<'a, F> {
     fn eq(&self, other: &Self) -> bool {
         self.value == other.value && self.point_id == other.point_id && self.offset == other.offset
     }
 }
 
-impl<'a> Eq for HeapEntry<'a> {}
+impl<'a, F: FloatType> Eq for HeapEntry<'a, F> {}
 
-impl<'a> PartialOrd for HeapEntry<'a> {
+impl<'a, F: FloatType> PartialOrd for HeapEntry<'a, F> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.value.cmp(&other.value))
     }
 }
 
-impl<'a> Ord for HeapEntry<'a> {
+impl<'a, F: FloatType> Ord for HeapEntry<'a, F> {
     fn cmp(&self, other: &Self) -> Ordering {
         self.value.cmp(&other.value)
     }
@@ -203,7 +215,7 @@ impl<'a> Ord for HeapEntry<'a> {
 /// 2-Approx for the diameter: find farthest point of farthest point of an arbitrary point.
 ///
 /// The diameter is less than the returned value, and the returned value is at most twice the diameter.
-pub fn estimate_diameter<D: Data<Elem = f32>>(points: &PointSet<D>) -> f32 {
+pub fn estimate_diameter<F: FloatType, D: Data<Elem = F>>(points: &PointSet<D>) -> F {
     // Arbitrary point p0: point at index 0.
     let p0 = points.row(0);
     // Find the farthest point p1.
@@ -219,7 +231,7 @@ pub fn estimate_diameter<D: Data<Elem = f32>>(points: &PointSet<D>) -> f32 {
         .map(|p| OrderedFloat(dist(&p1, &p)))
         .max()
         .unwrap();
-    2.0 * apx.0
+    <F as From<f32>>::from(2.0f32) * apx.0
 }
 
 #[cfg(test)]

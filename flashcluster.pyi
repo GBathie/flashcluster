@@ -1,3 +1,7 @@
+"""
+Typing stubs and documentation for flashcluster
+"""
+
 from typing import Literal
 import numpy as np
 
@@ -19,7 +23,7 @@ class Ultrametric:
 
     :param points: set of points for clustering. Must be a 2D numpy array, with dtype=np.f32
     :param c: approximation factor. Must be greater than 1.0
-    :param mode: "fast": may under-estimate the distance in some cases, but performs better.
+    :param mode: "fast": may under-estimate the distance in some cases, but performs better on average.
         "precise": almost never under-estimates the distance, but returns larger distances.
     """
     def __init__(self, points: np.ndarray, c: float, mode: Literal["fast", "precise"]) -> None: ...

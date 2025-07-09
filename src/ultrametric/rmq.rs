@@ -4,19 +4,23 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
+use num_traits::Float;
+
+use crate::points::FloatType;
+
 #[derive(Debug, Clone)]
 /// Range Maximum Query data structure
 /// with `O(1)` query time and `O(n log n)` space and construction time.
-pub(super) struct Rmq {
+pub(super) struct Rmq<F: FloatType> {
     /// Dynamic programming table defined as `mem[l][i] = min(T[i..i + 2^l])`.
-    mem: Vec<Vec<f32>>,
+    mem: Vec<Vec<F>>,
 }
 
-impl Rmq {
+impl<F: FloatType> Rmq<F> {
     /// Construct a new RMQ data structure over the given array.
     ///
     /// If `values` is empty, returns [`Err`].
-    pub fn new(values: Vec<f32>) -> Result<Self, ()> {
+    pub fn new(values: Vec<F>) -> Result<Self, ()> {
         if values.is_empty() {
             Err(())
         } else {
@@ -29,7 +33,7 @@ impl Rmq {
     ///
     /// Returns [`None`] if the range is empty.
     /// The endpoints of the range are clamped to the interval `[0..=n]`.
-    pub fn get_max(&self, range: impl RangeBounds<usize>) -> Option<f32> {
+    pub fn get_max(&self, range: impl RangeBounds<usize>) -> Option<F> {
         let n = self.mem[0].len();
         let start = match range.start_bound() {
             Bound::Included(&idx) => min(n, idx),
@@ -50,7 +54,7 @@ impl Rmq {
         // `l` is the largest power of two less than or equal to `delta`.
         let l = (delta + 1).next_power_of_two() / 2;
         let step = l.ilog2() as usize;
-        Some(f32::max(self.mem[step][i], self.mem[step][j + 1 - l]))
+        Some(Float::max(self.mem[step][i], self.mem[step][j + 1 - l]))
     }
 }
 
@@ -63,18 +67,18 @@ impl Rmq {
 ///
 /// # Panics
 /// Panics if `values` is empty.
-fn build_rmq(values: Vec<f32>) -> Vec<Vec<f32>> {
+fn build_rmq<F: FloatType>(values: Vec<F>) -> Vec<Vec<F>> {
     let n = values.len();
     let h = n.ilog2() as usize + 1;
 
-    let mut mem: Vec<Vec<f32>> = vec![values];
+    let mut mem: Vec<Vec<F>> = vec![values];
 
     for step in 0..(h - 1) {
         let l = 1 << step;
         let next = (0..n)
             .map(|i| {
                 if i + l < n {
-                    f32::max(mem[step][i], mem[step][i + l])
+                    Float::max(mem[step][i], mem[step][i + l])
                 } else {
                     mem[step][i]
                 }

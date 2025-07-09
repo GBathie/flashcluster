@@ -1,19 +1,24 @@
 use kt::gamma_kt;
 use ndarray::Data;
+use ndarray_rand::rand_distr::{Distribution, StandardNormal};
 use ordered_float::OrderedFloat;
 
-use crate::{afn::estimate_diameter, points::PointSet, union_find::UnionFind};
+use crate::{
+    afn::estimate_diameter,
+    points::{FloatType, PointSet},
+    union_find::UnionFind,
+};
 
 mod kt;
 
 /// Represents an edge as a tuple of (endpoint 1, endpoint 2, weight).
 #[derive(Debug, Clone, Copy)]
-pub struct Edge(pub usize, pub usize, pub f32);
+pub struct Edge<F: FloatType>(pub usize, pub usize, pub F);
 
 #[derive(Debug, Clone)]
 /// A minimum spanning tree, with edges sorted by weights.
-pub struct SpanningTree {
-    pub edges: Vec<Edge>,
+pub struct SpanningTree<F: FloatType> {
+    pub edges: Vec<Edge<F>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -22,12 +27,22 @@ pub struct KtParams {
 }
 
 impl KtParams {
-    pub fn compute_kt<D: Data<Elem = f32>>(&self, points: &PointSet<D>) -> SpanningTree {
+    pub fn compute_kt<F: FloatType, D: Data<Elem = F>>(
+        &self,
+        points: &PointSet<D>,
+    ) -> SpanningTree<F>
+    where
+        StandardNormal: Distribution<F>,
+    {
         let n = points.nrows();
         let max_dist = estimate_diameter(points);
 
-        // TODO: fix min dist?
-        let edges = gamma_kt(points, self.gamma, 0.01, max_dist);
+        let edges = gamma_kt(
+            points,
+            <F as From<f32>>::from(self.gamma),
+            <F as From<f32>>::from(0.01),
+            max_dist,
+        );
         let res = exact_mst_krusal(edges, n);
 
         assert_eq!(res.edges.len(), n - 1);
@@ -36,7 +51,7 @@ impl KtParams {
 }
 
 /// Compute an MST using Kruskal's algorithm.
-fn exact_mst_krusal(mut edges: Vec<Edge>, n: usize) -> SpanningTree {
+fn exact_mst_krusal<F: FloatType>(mut edges: Vec<Edge<F>>, n: usize) -> SpanningTree<F> {
     edges.sort_unstable_by_key(|e| OrderedFloat(e.2));
     let mut uf = UnionFind::new(n);
     let edges = edges
@@ -72,7 +87,7 @@ mod test {
             let p1 = points.row(i);
             for j in i + 1..n {
                 let p2 = points.row(j);
-                let d = dist(&p1, &p2);
+                let d: f32 = dist(&p1, &p2);
                 full_edges.push(Edge(i, j, d));
             }
         }

@@ -1,42 +1,49 @@
 use std::{cmp::max, collections::VecDeque};
 
 use ndarray::Data;
+use ndarray_rand::rand_distr::{Distribution, StandardNormal};
+use num_traits::NumCast;
 
 use crate::{
     lsh::{projection_lsh, rho},
-    points::{PointSet, dist},
+    points::{FloatType, PointSet, dist},
 };
 
 use super::Edge;
 
 /// Returns a (gamma+o(1))-KT.
-pub fn gamma_kt<D: Data<Elem = f32>>(
+pub fn gamma_kt<F: FloatType, D: Data<Elem = F>>(
     points: &PointSet<D>,
-    gamma: f32,
-    min_dist: f32,
-    max_dist: f32,
-) -> Vec<Edge> {
+    gamma: F,
+    min_dist: F,
+    max_dist: F,
+) -> Vec<Edge<F>>
+where
+    StandardNormal: Distribution<F>,
+{
     let mut edges = vec![];
     let mut radius = min_dist;
     let n = points.dim().0;
-    let step = 1. + 5. / (n as f32).log2();
+    let step = F::one() + <F as From<f32>>::from(5.0) / (<F as NumCast>::from(n).unwrap()).log2();
     while radius <= step * max_dist {
         iter_local_bfs(points, radius, gamma, &mut edges);
-        radius *= step;
+        radius = radius * step;
     }
 
     edges
 }
 
-fn iter_local_bfs<D: Data<Elem = f32>>(
+fn iter_local_bfs<F: FloatType, D: Data<Elem = F>>(
     points: &PointSet<D>,
-    radius: f32,
-    gamma: f32,
-    edges: &mut Vec<Edge>,
-) {
+    radius: F,
+    gamma: F,
+    edges: &mut Vec<Edge<F>>,
+) where
+    StandardNormal: Distribution<F>,
+{
     let (n, _d) = points.dim();
     let rho = rho(gamma);
-    let nb_iter = max((n as f32).powf(rho) as usize, 1usize);
+    let nb_iter = max(<F as NumCast>::from(n).unwrap().powf(rho).as_(), 1usize);
 
     for _ in 0..nb_iter {
         local_bfs(points, radius, gamma, edges);
@@ -44,12 +51,14 @@ fn iter_local_bfs<D: Data<Elem = f32>>(
 }
 
 /// BFS in buckets of LSH
-fn local_bfs<D: Data<Elem = f32>>(
+fn local_bfs<F: FloatType, D: Data<Elem = F>>(
     points: &PointSet<D>,
-    radius: f32,
-    gamma: f32,
-    edges: &mut Vec<Edge>,
-) {
+    radius: F,
+    gamma: F,
+    edges: &mut Vec<Edge<F>>,
+) where
+    StandardNormal: Distribution<F>,
+{
     let buckets = projection_lsh(points, radius, gamma);
     for mut b in buckets {
         while let Some(x) = b.pop() {

@@ -4,11 +4,12 @@
 use std::mem::swap;
 
 use ndarray::Data;
+use ndarray_rand::rand_distr::{Distribution, StandardNormal};
 use ordered_float::NotNan;
 
 use crate::{
     afn::ApproxFarthestNeighbor,
-    points::PointSet,
+    points::{FloatType, PointSet},
     spanning_tree::{Edge, SpanningTree},
     union_find::UnionFind,
 };
@@ -20,12 +21,15 @@ pub struct CwParams {
 }
 
 impl CwParams {
-    pub fn compute_weights<D: Data<Elem = f32>>(
+    pub fn compute_weights<F: FloatType, D: Data<Elem = F>>(
         &self,
         points: &PointSet<D>,
-        mst: SpanningTree,
-    ) -> Vec<Edge> {
-        apx_cut_weights(points, mst, self.alpha, self.mode)
+        mst: SpanningTree<F>,
+    ) -> Vec<Edge<F>>
+    where
+        StandardNormal: Distribution<F>,
+    {
+        apx_cut_weights(points, mst, <F as From<f32>>::from(self.alpha), self.mode)
     }
 }
 
@@ -45,12 +49,15 @@ pub enum MultiplyMode {
 
 /// Compute an alpha-approximation of the cut weights in time `O(n^(1+1/alpha^2)`
 /// using Approximate Farthest Neighbors queries.
-pub(crate) fn apx_cut_weights<D: Data<Elem = f32>>(
+pub(crate) fn apx_cut_weights<F: FloatType, D: Data<Elem = F>>(
     points: &PointSet<D>,
-    mst: SpanningTree,
-    alpha: f32,
+    mst: SpanningTree<F>,
+    alpha: F,
     mode: MultiplyMode,
-) -> Vec<Edge> {
+) -> Vec<Edge<F>>
+where
+    StandardNormal: Distribution<F>,
+{
     let (n, _d) = points.dim();
     let mut uf = UnionFind::new(n);
 
